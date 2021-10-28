@@ -1,3 +1,7 @@
+## Why?
+
+To get Rust practice and learn about async Rust :)
+
 ### Deliverables
 
 #### Milestone one

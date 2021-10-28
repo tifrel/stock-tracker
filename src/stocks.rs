@@ -104,7 +104,7 @@ impl StockInfo {
 
     pub fn fmt_csv(&self) -> String {
         format!(
-            "{},{},${:.2},{:.2},${:.2},${:.2},${}",
+            "{},{},{:.2},{:.2},{:.2},{:.2},{}",
             self.from.to_rfc3339(),
             self.symbol,
             self.open,
