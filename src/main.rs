@@ -1,11 +1,11 @@
 use chrono::prelude::*;
 use clap::clap_app;
+use tokio;
 use yahoo::YahooConnector;
 use yahoo_finance_api as yahoo;
 
-mod stocks;
-mod util;
-use stocks::*;
+extern crate rust_stock_tracker_lib;
+use rust_stock_tracker_lib::stocks::*;
 
 struct Args {
     from: DateTime<Utc>,
@@ -44,13 +44,32 @@ fn init() -> Args {
     Args { from, symbols }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = init();
-    let connector = YahooConnector::new();
+    let from = args.from;
+
+    let (tx, mut rx) = tokio::sync::mpsc::channel(args.symbols.len());
+
+    // send of the fetching to different tasks
+    let connector_arc = std::sync::Arc::new(YahooConnector::new());
     for symbol in args.symbols {
-        match StockInfo::fetch_since(&connector, &symbol, args.from) {
-            Err(err) => eprintln!("Fetch failed: {} (\"{}\")", err, symbol),
-            Ok(stock) => println!("{}", stock.fmt_csv()),
-        };
+        let connector = connector_arc.clone();
+        // need to clone for borrow checker
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            let info = StockInfo::fetch_since(&connector, &symbol, from).await;
+            tx.send((symbol, info)).await.unwrap();
+        });
+    }
+
+    drop(tx); // We need this drop for the program to terminate
+
+    loop {
+        match rx.recv().await {
+            Some((symbol, Err(err))) => eprintln!("Fetch failed: {} (\"{}\")", err, symbol),
+            Some((_, Ok(stock))) => println!("{}", stock.fmt_csv()),
+            None => std::process::exit(0),
+        }
     }
 }

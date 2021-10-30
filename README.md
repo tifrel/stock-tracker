@@ -2,20 +2,53 @@
 
 To get Rust practice and learn about async Rust :)
 
-### Deliverables
+## Deliverables
 
-#### Milestone one
+### Milestone one
 
-- Use `yahoo_finance_api` to fetch prices. For now, we stick with the
-  `"blocking"` feature before we move to async later on
-- CLI arguments: stock symbols, from-date
-  - use clap for this
-- indicators
-  - `n_window_sma`
-  - `price_diff`
-- Print a csv to `stdout`, and errors to `stderr`
-  - CSV columns: Date of last quote, stock symbol, close price for last quote,
-    percentage change since open, high, low, 30d-MA
-  - Numbers get a max of two decimal places
+- [x] Use `yahoo_finance_api` to fetch prices. For now, we stick with the
+      `"blocking"` feature before we move to async later on
+- [x] CLI arguments: stock symbols, from-date
+  - [x] use clap for this
+- [x] indicators
+  - [x] `n_window_sma`
+  - [x] `price_diff`
+- [x] Print a csv to `stdout`, and errors to `stderr`
+  - [x] CSV columns: Date of last quote, stock symbol, close price for last
+        quote, percentage change since open, high, low, 30d-MA
+  - [x] Numbers get a max of two decimal places
 
-### Take-home messages
+### Milestone 2
+
+- [x] Write tests -> Already did that before, because TDD
+- [x] Transform the code to be async
+  - [x] I will go for [`tokio`](https://tokio.rs/), as I feel it to be the most
+        used. Stats on crates.io confirm that.
+- [ ] Use actors for the data processing
+  - [ ] Wrapping code to work in actors
+  - [ ] Publish and subscribe to messages without explicit calls
+  - [ ] For `tokio`, on should use [`actix`](https://crates.io/crates/actix)
+- [ ] Continuous fetching of stock quotes for each symbols
+  - [ ] needs to happen every 30 seconds
+  - [ ] Never sleep the thread -> Actors
+  - [ ] Actors for the processing
+- [ ] Code polishing
+  - [ ] Testing for function limitations
+  - [ ] Do I miss data because of backlog?
+  - [ ] Other ways to implement this pipeline?
+- [ ] Test with all the S&P500 symbols
+
+### Milestone 3
+
+### Milestone 4
+
+## Take-home messages
+
+- Simply slapping an `async/.await` everywhere does not cut it -> takes more
+  than 7 minutes for S&P500
+  - Once I start using `tokio::spawn`, this condenses to ca. 30 seconds
+  - try resolving the Err/Ok variant inside the spawned task, not in the main
+    function -> use `tokio::select` for that
+  - However it is not strictly less than 30 seconds, just about averaging around
+    that. Seeing the `flamegraph.svg`, more than 50% of total runtime is spent
+    doing SSL handshakes.

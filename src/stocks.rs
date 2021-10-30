@@ -17,14 +17,15 @@ pub struct StockHistory {
 }
 
 impl StockHistory {
-    pub fn fetch(
+    pub async fn fetch(
         connector: &YahooConnector,
         ticker: &str,
         from: DateTime<Utc>,
     ) -> Result<Self, YahooError> {
         let to = Utc::now();
         let quotes = connector
-            .get_quote_history_interval(ticker, from, to, "1d")?
+            .get_quote_history_interval(ticker, from, to, "1d")
+            .await?
             .quotes()?;
         let (open, high, low, close) = Self::quote_transpose(quotes);
 
@@ -71,12 +72,13 @@ impl TryFrom<&StockHistory> for StockInfo {
         if history.open.len() == 0 {
             return Err(());
         }
+        let l = history.open.len();
         let open = history.open[0];
         // unwrap is fine, as we already checked our failure condition above
         let high = util::max(&history.high).unwrap();
         let low = util::min(&history.low).unwrap();
-        let close = history.close[history.close.len() - 1];
-        let sma30 = util::sma(&history.open, 30).map(|sma_vec| *sma_vec.last().unwrap());
+        let close = history.close[l - 1];
+        let sma30 = util::avg(&history.open[l - 30..]);
         Ok(Self {
             symbol: history.symbol.clone(),
             from: history.from,
@@ -90,12 +92,14 @@ impl TryFrom<&StockHistory> for StockInfo {
 }
 
 impl StockInfo {
-    pub fn fetch_since(
+    pub async fn fetch_since(
         connector: &YahooConnector,
         ticker: &str,
         from: DateTime<Utc>,
     ) -> Result<Self, YahooError> {
-        let history = StockHistory::fetch(&connector, ticker, from)?;
+        // TODO::bench -> we loop over all data while fetching history, and
+        // and once more when converting -> should possibly be merged
+        let history = StockHistory::fetch(&connector, ticker, from).await?;
         // unwrap should be fine, as we the yahoo api gives us a
         // `YahooError::EmptyDataSet` variant, which is the only reason for
         // the conversion to fail
@@ -108,7 +112,7 @@ impl StockInfo {
             self.from.to_rfc3339(),
             self.symbol,
             self.open,
-            util::diff(&[self.open, self.close]).unwrap().0 * 100.0,
+            (self.close / self.open - 1.0) * 100.0,
             self.low,
             self.high,
             self.sma30
