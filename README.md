@@ -24,19 +24,19 @@ To get Rust practice and learn about async Rust :)
 - [x] Transform the code to be async
   - [x] I will go for [`tokio`](https://tokio.rs/), as I feel it to be the most
         used. Stats on crates.io confirm that.
-- [ ] Use actors for the data processing
-  - [ ] Wrapping code to work in actors
-  - [ ] Publish and subscribe to messages without explicit calls
-  - [ ] For `tokio`, on should use [`actix`](https://crates.io/crates/actix)
-- [ ] Continuous fetching of stock quotes for each symbols
-  - [ ] needs to happen every 30 seconds
-  - [ ] Never sleep the thread -> Actors
-  - [ ] Actors for the processing
+- [x] Use actors for the data processing
+  - [x] Wrapping code to work in actors
+  - [x] Publish and subscribe to messages without explicit calls
+  - [x] For `tokio`, one should use [`actix`](https://crates.io/crates/actix)
+- [x] Continuous fetching of stock quotes for each symbols
+  - [x] needs to happen every 30 seconds
+  - [x] Never sleep the thread -> Actors
+  - [x] Actors for the processing
 - [ ] Code polishing
-  - [ ] Testing for function limitations
+  - [x] Testing for function limitations
   - [ ] Do I miss data because of backlog?
   - [ ] Other ways to implement this pipeline?
-- [ ] Test with all the S&P500 symbols
+- [x] Test with all the S&P500 symbols
 
 ### Milestone 3
 
@@ -52,3 +52,16 @@ To get Rust practice and learn about async Rust :)
   - However it is not strictly less than 30 seconds, just about averaging around
     that. Seeing the `flamegraph.svg`, more than 50% of total runtime is spent
     doing SSL handshakes.
+  - Trying at the university yields 3 seconds. Yup, it's the network.
+- Actix seems like a lot of boilerplate, I wouldn't necessarily use it, but it's
+  part of the requirements...
+  - There a few tests in `src/transform.rs`, mostly to show how it would
+    basically work. Focus should be on battletesting and stability. Regarding
+    stability, I didn't get any improper behavior in 20 minutes of running.
+    Let's assume it would fail the next moment because the buffer (size = number
+    of stocks = 500) couldn't handle any more messages. That means each fetching
+    batch (40 total) contributed 12.5 messages to congestion and is 2.5% too
+    load-heavy for the allocated time period.
+  - One problem with the Actor-based system is the increased complexity for
+    measuring the fetch time of a single batch, but might be handled in a
+    specific binary compiled for that purpose.

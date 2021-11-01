@@ -1,11 +1,10 @@
+use actix::prelude::*;
 use chrono::prelude::*;
 use clap::clap_app;
-use tokio;
-use yahoo::YahooConnector;
-use yahoo_finance_api as yahoo;
+use tokio::time;
 
 extern crate rust_stock_tracker_lib;
-use rust_stock_tracker_lib::stocks::*;
+use rust_stock_tracker_lib::*;
 
 struct Args {
     from: DateTime<Utc>,
@@ -44,32 +43,30 @@ fn init() -> Args {
     Args { from, symbols }
 }
 
-#[tokio::main]
+#[actix_rt::main]
 async fn main() {
     let args = init();
-    let from = args.from;
+    let bufsize = args.symbols.len();
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel(args.symbols.len());
+    let (ticker, tick_rx) = Ticker::new(time::Duration::from_secs(30), 3);
+    let ticker = ticker.start();
 
-    // send of the fetching to different tasks
-    let connector_arc = std::sync::Arc::new(YahooConnector::new());
-    for symbol in args.symbols {
-        let connector = connector_arc.clone();
-        // need to clone for borrow checker
-        let tx = tx.clone();
-        tokio::spawn(async move {
-            let info = StockInfo::fetch_since(&connector, &symbol, from).await;
-            tx.send((symbol, info)).await.unwrap();
-        });
-    }
+    let (fetcher, fetch_rx, mut fetch_err_rx) = Fetcher::new(args.symbols, args.from);
+    let fetcher = fetcher.start();
+    subscribe(fetcher, tick_rx);
 
-    drop(tx); // We need this drop for the program to terminate
+    let (transformer, info_rx) = Transformer::new(bufsize).unwrap();
+    let transformer = transformer.start();
+    subscribe(transformer, fetch_rx);
+
+    let printer = Printer.start();
+    subscribe(printer, info_rx);
+
+    let _ = ticker.send(StartTicking).await;
 
     loop {
-        match rx.recv().await {
-            Some((symbol, Err(err))) => eprintln!("Fetch failed: {} (\"{}\")", err, symbol),
-            Some((_, Ok(stock))) => println!("{}", stock.fmt_csv()),
-            None => std::process::exit(0),
+        tokio::select! {
+            Some(err) = fetch_err_rx.recv() => eprintln!("{}", err)
         }
     }
 }
