@@ -34,7 +34,7 @@ To get Rust practice and learn about async Rust :)
   - [x] Actors for the processing
 - [ ] Code polishing
   - [x] Testing for function limitations
-  - [ ] Do I miss data because of backlog?
+  - [x] Do I miss data because of backlog?
   - [ ] Other ways to implement this pipeline?
 - [x] Test with all the S&P500 symbols
 
@@ -52,7 +52,8 @@ To get Rust practice and learn about async Rust :)
   - However it is not strictly less than 30 seconds, just about averaging around
     that. Seeing the `flamegraph.svg`, more than 50% of total runtime is spent
     doing SSL handshakes.
-  - Trying at the university yields 3 seconds. Yup, it's the network.
+  - Trying at the university reliably yields between 3.0 and 3.5 seconds. Yup,
+    it's the network.
 - Actix seems like a lot of boilerplate, I wouldn't necessarily use it, but it's
   part of the requirements...
   - There a few tests in `src/transform.rs`, mostly to show how it would
@@ -64,4 +65,4 @@ To get Rust practice and learn about async Rust :)
     load-heavy for the allocated time period.
   - One problem with the Actor-based system is the increased complexity for
     measuring the fetch time of a single batch, but might be handled in a
-    specific binary compiled for that purpose.
+    specific binary compiled for that purpose. (Done in `src/bin/bench.rs`)

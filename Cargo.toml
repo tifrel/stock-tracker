@@ -8,8 +8,12 @@ name = "rust_stock_tracker_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rust-stock-tracker"
-path = "src/main.rs"
+name = "rust-stock-tracker-cli"
+path = "src/bin/cli.rs"
+
+[[bin]]
+name = "rust-stock-tracker-bench"
+path = "src/bin/bench.rs"
 
 # [[bin]]
 # name = "rust_crypto_tracker"
