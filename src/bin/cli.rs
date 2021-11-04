@@ -6,16 +6,18 @@ use tokio::time;
 extern crate rust_stock_tracker_lib;
 use rust_stock_tracker_lib::*;
 
-struct Args {
-    from: DateTime<Utc>,
-    symbols: Vec<String>,
-}
-
 macro_rules! exit {
     ($code:expr, $template:tt, $($tt:tt)*) => {{
         eprintln!($template, $($tt)*);
         std::process::exit($code);
     }};
+}
+
+struct Args {
+    from: DateTime<Utc>,
+    symbols: Vec<String>,
+    interval: time::Duration,
+    debounce: time::Duration,
 }
 
 fn init() -> Args {
@@ -25,6 +27,8 @@ fn init() -> Args {
         (about: "Fetches stock prices from the Yahoo API")
         (@arg from: +required "Starting date in %Y-%m-%d format")
         (@arg symbols: +required "Ticker symbols for the stocks to fetch")
+        (@arg interval: -i --interval +takes_value "Interval between fetches in seconds (default: 30 seconds")
+        (@arg debounce: -d --debounce +takes_value "Minimum delay between initializing two requests (default: 15 ms)")
     )
     .get_matches();
 
@@ -40,7 +44,32 @@ fn init() -> Args {
         Ok(dt) => dt.with_timezone(&Utc),
     };
 
-    Args { from, symbols }
+    let interval = time::Duration::from_secs(
+        matches
+            .value_of("interval")
+            .map(|s| match s.parse() {
+                Ok(i) => i,
+                Err(e) => exit!(1, "Failed to parse interval: {}", e),
+            })
+            .unwrap_or(30),
+    );
+
+    let debounce = time::Duration::from_millis(
+        matches
+            .value_of("debounce")
+            .map(|s| match s.parse() {
+                Ok(i) => i,
+                Err(e) => exit!(1, "Failed to parse debounce: {}", e),
+            })
+            .unwrap_or(15),
+    );
+
+    Args {
+        from,
+        symbols,
+        interval,
+        debounce,
+    }
 }
 
 #[actix_rt::main]
@@ -48,10 +77,11 @@ async fn main() {
     let args = init();
     let bufsize = args.symbols.len();
 
-    let (ticker, tick_rx) = Ticker::new(time::Duration::from_secs(30), 3);
+    let (ticker, tick_rx) = Ticker::new(args.interval, 5);
     let ticker = ticker.start();
 
-    let (fetcher, fetch_rx, mut fetch_err_rx) = Fetcher::new(args.symbols, args.from);
+    let (fetcher, fetch_rx, mut fetch_err_rx) =
+        Fetcher::new(args.symbols, args.from, args.debounce);
     let fetcher = fetcher.start();
     subscribe(fetcher, tick_rx);
 

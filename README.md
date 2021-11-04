@@ -2,7 +2,10 @@
 
 A stock tracking app, that fetches stock prices every 30 seconds (default) from
 the Yahoo Finance API. The testing is done with S&P500 index, thus requiring
-high throughput which is achieved by using asynchronous, non-blocking code.
+high throughput which is achieved by using asynchronous, non-blocking code. This
+gif shows the speedup:
+
+![Sync vs. async demonstration](./sync-vs-async.gif)
 
 ## Why?
 

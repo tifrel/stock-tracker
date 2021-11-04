@@ -81,7 +81,8 @@ async fn main() {
 
     let mut bench = Benchmark::start();
 
-    let (fetcher, fetch_rx, mut fetch_err_rx) = Fetcher::new(symbols, from_date);
+    let (fetcher, fetch_rx, mut fetch_err_rx) =
+        Fetcher::new(symbols, from_date, tokio::time::Duration::from_millis(15));
     let fetcher = fetcher.start();
 
     let (transformer, mut info_rx) = Transformer::new(500).unwrap();
